@@ -22,7 +22,8 @@
     "demo:agent": "pnpm --filter @warden/agent demo",
     "demo:reset": "node scripts/reset-demo.mjs",
     "deck:pptx": "node deck/generate-pptx.mjs",
-    "rain:smoke": "pnpm --filter @warden/agent rain:smoke"
+    "rain:smoke": "pnpm --filter @warden/agent rain:smoke",
+    "rain:reclaim": "pnpm --filter @warden/agent rain:reclaim"
   },
   "packageManager": "pnpm@11.20.0",
   "engines": {

@@ -12,7 +12,8 @@
     "start": "node dist/cli.js",
     "api": "tsx src/server/run.ts",
     "demo": "tsx src/main.ts",
-    "rain:smoke": "tsx scripts/rainSmoke.ts"
+    "rain:smoke": "tsx scripts/rainSmoke.ts",
+    "rain:reclaim": "tsx scripts/rainReclaim.ts"
   },
   "dependencies": {
     "@slack/bolt": "^5.0.0",

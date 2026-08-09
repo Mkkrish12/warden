@@ -19,6 +19,8 @@ export interface ScopedCardResult {
   last4: string;
   scope: CardScope;
   txStatus: "settled" | "failed";
+  /** Present when `txStatus` is `"failed"` — safe to show in the UI. */
+  failureReason?: string;
 }
 
 /**

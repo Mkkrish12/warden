@@ -32,6 +32,10 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+function dollars(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 /**
  * Issues real scoped cards through the Rain sandbox.
  *
@@ -72,6 +76,25 @@ export function createRainPaymentProvider(
         singleUse: true,
       };
 
+      // Fail fast when the sandbox credit line can't cover this invoice. Without
+      // this check Rain still mints the card, then authorize returns
+      // `account_credit_limit_exceeded` and the UI shows a vague settlement failure.
+      try {
+        const bal = await client.getBalances();
+        if (bal.spendingPower < amountInUSDCents) {
+          const msg =
+            `Rain spendingPower ${dollars(bal.spendingPower)} < invoice ${dollars(amountInUSDCents)} ` +
+            `(creditLimit ${dollars(bal.creditLimit)}, posted ${dollars(bal.postedCharges)}, ` +
+            `pending ${dollars(bal.pendingCharges)}). Run: pnpm rain:reclaim`;
+          console.error(`[rain] ${invoice.invoiceId}: ${msg}`);
+          throw new Error(msg);
+        }
+      } catch (err) {
+        // Re-throw our own spendingPower error; only swallow balance-fetch problems.
+        if (err instanceof Error && err.message.includes("spendingPower")) throw err;
+        console.warn(`[rain] could not read balances before mint: ${describeError(err)}`);
+      }
+
       // --- 1. mint the scoped card ---------------------------------------
       let card;
       let session;
@@ -90,9 +113,18 @@ export function createRainPaymentProvider(
         `[rain] card ${card.id} •••• ${last4} · $${invoice.amount.toFixed(2)} · expires ${expiresAt}`,
       );
 
-      const failed = (reason: string): ScopedCardResult => {
+      const cancelQuietly = async () => {
+        try {
+          await client.cancelCard(card.id);
+        } catch (err) {
+          console.warn(`[rain] failed to cancel card ${card.id}: ${describeError(err)}`);
+        }
+      };
+
+      const failed = async (reason: string): Promise<ScopedCardResult> => {
         console.error(`[rain] ${invoice.invoiceId}: ${reason}`);
-        return { cardId: card.id, last4, scope, txStatus: "failed" };
+        await cancelQuietly();
+        return { cardId: card.id, last4, scope, txStatus: "failed", failureReason: reason };
       };
 
       // --- 2. authorize ---------------------------------------------------
@@ -109,7 +141,12 @@ export function createRainPaymentProvider(
 
       const AUTHORIZED_STATUSES = new Set(["authorized", "approved", "approved_completed"]);
       if (!AUTHORIZED_STATUSES.has(authorization.status)) {
-        return failed(`authorization returned "${authorization.status ?? "no status"}"`);
+        const detail = authorization.declinedReason
+          ? ` (${authorization.declinedReason})`
+          : "";
+        return failed(
+          `authorization returned "${authorization.status ?? "no status"}"${detail}`,
+        );
       }
 
       // --- 3. settle ------------------------------------------------------
@@ -117,6 +154,12 @@ export function createRainPaymentProvider(
       try {
         settlement = await client.settle(authorization.transactionId, amountInUSDCents);
       } catch (err) {
+        // Best-effort: reverse the auth so it doesn't sit in pendingCharges.
+        try {
+          await client.reverseAuthorization(authorization.transactionId);
+        } catch {
+          /* ignore */
+        }
         return failed(`settlement request failed: ${describeError(err)}`);
       }
 

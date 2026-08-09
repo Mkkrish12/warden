@@ -10,34 +10,16 @@ interface Props {
   onOpenInvoice: (invoiceId: string) => void;
 }
 
-function StatCard({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  tone?: "default" | "brand" | "critical" | "attention";
-}) {
-  const color =
-    tone === "brand"
-      ? "text-brand"
-      : tone === "critical"
-        ? "text-critical"
-        : tone === "attention"
-          ? "text-[#B26100]"
-          : "text-text";
-
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <p className="text-[13px] font-medium text-text-sub">{label}</p>
-      <p className={`tnum mt-2 text-[30px] leading-none font-semibold ${color}`}>{value}</p>
+      <p className="tnum mt-2 text-[32px] leading-none font-bold text-brand">{value}</p>
     </Card>
   );
 }
 
 export function DashboardPage({ invoices, events, onOpenInvoice }: Props) {
-
   const stats = useMemo(() => {
     const paid = invoices.filter((i) => i.status === "paid");
     const totalPaid = paid.reduce((sum, i) => sum + (i.amount ?? 0), 0);
@@ -82,58 +64,60 @@ export function DashboardPage({ invoices, events, onOpenInvoice }: Props) {
       <PageTitle title="Dashboard" subtitle="Evergreen Home Co · supplier payments" />
 
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Paid" value={usdCompact(stats.totalPaid)} tone="brand" />
-        <StatCard label="Pending" value={String(stats.pending)} tone="attention" />
-        <StatCard label="Blocked" value={String(stats.blocked)} tone="critical" />
+        <StatCard label="Total Paid" value={usdCompact(stats.totalPaid)} />
+        <StatCard label="Pending" value={String(stats.pending)} />
+        <StatCard label="Blocked" value={String(stats.blocked)} />
         <StatCard label="This Month" value={usdCompact(stats.thisMonth)} />
       </div>
 
-      <Card className="mb-5" padding={false}>
-        <CardHeader title="Recent Activity" />
-        {recent.length === 0 ? (
-          <EmptyState message="Waiting for the agent to process invoices…" />
-        ) : (
-          <ul>
-            {recent.map((event) => {
-              const meta = EVENT_LABEL[event.type];
-              const amount = amountFor(event.invoiceId);
-              return (
-                <li key={event.id} className="animate-in border-b border-border last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => onOpenInvoice(event.invoiceId)}
-                    className="flex w-full items-center gap-4 px-5 py-2.5 text-left transition-colors hover:bg-hover"
-                  >
-                    <span className="tnum w-11 shrink-0 text-xs text-text-tertiary">
-                      {clockTime(event.ts)}
-                    </span>
-                    <span className="w-[104px] shrink-0">
-                      <Badge tone={event.ok ? meta.tone : meta.tone === "neutral" ? "critical" : meta.tone}>
-                        {meta.label}
-                      </Badge>
-                    </span>
-                    <span className="flex-1 truncate text-[13px] font-medium text-text">
-                      {vendorFor(event.invoiceId)}
-                    </span>
-                    <span className="tnum shrink-0 text-[13px] text-text-sub">{usd(amount)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
-
-      <Card padding={false}>
-        <CardHeader title="Vendor Spend" />
-        <div className="px-5 py-4">
-          {vendorSpend.length === 0 ? (
-            <EmptyState message="No settled payments yet." />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Card padding={false}>
+          <CardHeader title="Recent Activity" />
+          {recent.length === 0 ? (
+            <EmptyState message="Waiting for the agent to process invoices…" />
           ) : (
-            <VendorSpendChart data={vendorSpend} />
+            <ul>
+              {recent.map((event) => {
+                const meta = EVENT_LABEL[event.type];
+                const amount = amountFor(event.invoiceId);
+                return (
+                  <li key={event.id} className="animate-in border-b border-border last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => onOpenInvoice(event.invoiceId)}
+                      className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-hover"
+                    >
+                      <span className="tnum w-11 shrink-0 text-xs text-text-tertiary">
+                        {clockTime(event.ts)}
+                      </span>
+                      <span className="w-[100px] shrink-0">
+                        <Badge tone={event.ok ? meta.tone : meta.tone === "neutral" ? "critical" : meta.tone}>
+                          {meta.label}
+                        </Badge>
+                      </span>
+                      <span className="flex-1 truncate text-[13px] font-medium text-text">
+                        {vendorFor(event.invoiceId)}
+                      </span>
+                      <span className="tnum shrink-0 text-[13px] text-text-sub">{usd(amount)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
-      </Card>
+        </Card>
+
+        <Card padding={false}>
+          <CardHeader title="Vendor Spend" />
+          <div className="px-5 py-4">
+            {vendorSpend.length === 0 ? (
+              <EmptyState message="No settled payments yet." />
+            ) : (
+              <VendorSpendChart data={vendorSpend} onBarClick={onOpenInvoice} invoices={invoices} />
+            )}
+          </div>
+        </Card>
+      </div>
     </>
   );
 }

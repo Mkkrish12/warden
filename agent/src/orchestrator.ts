@@ -112,8 +112,10 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     });
 
     if (card.txStatus !== "settled") {
-      const reason = "card settlement failed";
-      emit(invoice, "settled", false, reason, { cardId: card.cardId });
+      // Prefer the provider's concrete reason (e.g. Rain declinedReason) over a
+      // generic label. Emit `blocked` so the UI doesn't show a green "Settled".
+      const reason = card.failureReason ?? "card settlement failed";
+      emit(invoice, "blocked", false, reason, { cardId: card.cardId });
       return { invoiceId: invoice.invoiceId, outcome: "failed", reason, card };
     }
 

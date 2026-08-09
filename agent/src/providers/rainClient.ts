@@ -19,6 +19,24 @@ export interface RainCard {
 export interface RainAuthorization {
   transactionId: string;
   status: string;
+  /** Present when status is declined — e.g. `account_credit_limit_exceeded`. */
+  declinedReason?: string;
+}
+
+export interface RainBalances {
+  creditLimit: number;
+  pendingCharges: number;
+  postedCharges: number;
+  balanceDue: number;
+  spendingPower: number;
+  currency: string;
+}
+
+export interface RainTransaction {
+  id: string;
+  type?: string;
+  status?: string;
+  spend?: { amount: number; merchantName?: string; cardId?: string };
 }
 
 /** Thrown with the response body attached so failures are diagnosable. */
@@ -56,6 +74,16 @@ export interface RainClient {
   settle(transactionId: string, amountInUSDCents: number): Promise<RainAuthorization>;
   /** Fetch a card's current state from Rain — status, limit, expiry. */
   getCard(cardId: string): Promise<RainCard>;
+  /** Cancel a card so it can't be charged and doesn't clutter the dashboard. */
+  cancelCard(cardId: string): Promise<void>;
+  /** Company-level credit: spendingPower is what authorize will actually allow. */
+  getBalances(): Promise<RainBalances>;
+  listCards(): Promise<RainCard[]>;
+  listTransactions(limit?: number): Promise<RainTransaction[]>;
+  /** Reverse an open authorization (frees pendingCharges). */
+  reverseAuthorization(transactionId: string): Promise<RainAuthorization>;
+  /** Refund a settled spend (frees postedCharges / restores spendingPower). */
+  refundTransaction(transactionId: string, amountInUSDCents: number): Promise<RainAuthorization>;
   revealLast4(card: RainCard, session: RainSession): string;
 }
 
@@ -137,7 +165,12 @@ export function createRainClient(cfg: AgentConfig): RainClient {
           merchantCategoryCode,
         },
       });
-      return unwrap<RainAuthorization>(body);
+      const auth = unwrap<RainAuthorization>(body);
+      return {
+        transactionId: auth.transactionId,
+        status: auth.status,
+        declinedReason: auth.declinedReason,
+      };
     },
 
     async settle(transactionId, amountInUSDCents) {
@@ -151,6 +184,48 @@ export function createRainClient(cfg: AgentConfig): RainClient {
     async getCard(cardId) {
       const body = await request<unknown>(`/issuing/cards/${cardId}`, { method: "GET" });
       return unwrap<RainCard>(body);
+    },
+
+    async cancelCard(cardId) {
+      await request<unknown>(`/issuing/cards/${cardId}`, {
+        method: "PATCH",
+        body: { status: "canceled" },
+      });
+    },
+
+    async getBalances() {
+      const body = await request<unknown>(`/issuing/balances`, { method: "GET" });
+      return unwrap<RainBalances>(body);
+    },
+
+    async listCards() {
+      const body = await request<unknown>(`/issuing/cards`, { method: "GET" });
+      const list = unwrap<RainCard[] | { data: RainCard[] }>(body);
+      return Array.isArray(list) ? list : list.data;
+    },
+
+    async listTransactions(limit = 100) {
+      const body = await request<unknown>(`/issuing/transactions?limit=${limit}`, {
+        method: "GET",
+      });
+      const list = unwrap<RainTransaction[] | { data: RainTransaction[] }>(body);
+      return Array.isArray(list) ? list : list.data;
+    },
+
+    async reverseAuthorization(transactionId) {
+      const body = await request<unknown>(`/simulate/transactions/${transactionId}/reverse`, {
+        method: "POST",
+        body: {},
+      });
+      return unwrap<RainAuthorization>(body);
+    },
+
+    async refundTransaction(transactionId, amountInUSDCents) {
+      const body = await request<unknown>(`/simulate/transactions/${transactionId}/refund`, {
+        method: "POST",
+        body: { amount: amountInUSDCents },
+      });
+      return unwrap<RainAuthorization>(body);
     },
 
     /**

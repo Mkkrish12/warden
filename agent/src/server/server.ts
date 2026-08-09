@@ -210,6 +210,21 @@ export function createApiServer(agent: Agent, opts: ApiServerOptions = {}): ApiS
     res.json(payload);
   });
 
+  /** Single card — fetched live from Rain for the invoice detail panel. */
+  app.get("/api/rain/cards/:cardId", async (req, res) => {
+    if (agent.payments.name !== "rain") {
+      res.status(404).json({ error: "Rain not configured" });
+      return;
+    }
+    try {
+      const client = createRainClient(agent.config);
+      const card = await client.getCard(req.params.cardId);
+      res.json({ card });
+    } catch (err) {
+      res.status(502).json({ error: (err as Error).message });
+    }
+  });
+
   /**
    * On-chain transaction history pulled directly from Monad.
    * Reads InvoicePaid and InvoiceBlocked logs from the APPolicy contract,
@@ -235,10 +250,9 @@ export function createApiServer(agent: Agent, opts: ApiServerOptions = {}): ApiS
       const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 
       const latestBlock = await publicClient.getBlockNumber();
-      // Monad public RPC: eth_getLogs limited to a 100-block range.
+      // Monad public RPC: eth_getLogs ≤ 100 blocks, and ≤ ~25 req/sec.
       const LOG_RANGE = 100n;
-      // POLICY_DEPLOY_BLOCK pins an exact start; otherwise last ~2k blocks (~33 min).
-      const lookback = 2_000n;
+      const lookback = 500n;
       const fromBlock = process.env.POLICY_DEPLOY_BLOCK
         ? BigInt(process.env.POLICY_DEPLOY_BLOCK)
         : latestBlock > lookback
@@ -276,25 +290,42 @@ export function createApiServer(agent: Agent, opts: ApiServerOptions = {}): ApiS
         "event InvoiceBlocked(bytes32 indexed invoiceId, string reason)",
       );
 
-      async function getLogsChunked(event: typeof paidEventAbi | typeof blockedEventAbi) {
-        const out: Awaited<ReturnType<typeof publicClient.getLogs>> = [];
-        for (let start = fromBlock; start <= latestBlock; start += LOG_RANGE) {
-          const end = start + LOG_RANGE - 1n > latestBlock ? latestBlock : start + LOG_RANGE - 1n;
-          const chunk = await publicClient.getLogs({
-            address: addr,
-            event,
-            fromBlock: start,
-            toBlock: end,
-          });
-          out.push(...chunk);
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+      async function getLogsSafe(
+        event: typeof paidEventAbi | typeof blockedEventAbi,
+        start: bigint,
+        end: bigint,
+      ) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            return await publicClient.getLogs({
+              address: addr,
+              event,
+              fromBlock: start,
+              toBlock: end,
+            });
+          } catch (err) {
+            const msg = (err as Error).message ?? "";
+            if (attempt < 2 && /limited to 25\/sec|rate/i.test(msg)) {
+              await sleep(250 * (attempt + 1));
+              continue;
+            }
+            throw err;
+          }
         }
-        return out;
+        return [];
       }
 
-      const [paidLogs, blockedLogs] = await Promise.all([
-        getLogsChunked(paidEventAbi),
-        getLogsChunked(blockedEventAbi),
-      ]);
+      // Sequential per chunk (both event types), with a small gap to stay under 25/sec.
+      const paidLogs: Awaited<ReturnType<typeof publicClient.getLogs>> = [];
+      const blockedLogs: Awaited<ReturnType<typeof publicClient.getLogs>> = [];
+      for (let start = fromBlock; start <= latestBlock; start += LOG_RANGE) {
+        const end = start + LOG_RANGE - 1n > latestBlock ? latestBlock : start + LOG_RANGE - 1n;
+        paidLogs.push(...(await getLogsSafe(paidEventAbi, start, end)));
+        blockedLogs.push(...(await getLogsSafe(blockedEventAbi, start, end)));
+        await sleep(50);
+      }
 
       // Fetch block timestamps for InvoiceBlocked (event has no timestamp field).
       const blockedBlockNums = [...new Set(blockedLogs.map((l) => l.blockNumber!))];

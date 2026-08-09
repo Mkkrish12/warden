@@ -101,6 +101,18 @@ Requires `RAIN_API_KEY` and `RAIN_USER_ID` in `.env`. If you don't know your use
 curl -H "Api-Key: $RAIN_API_KEY" https://api-dev.raincards.xyz/v1/issuing/users
 ```
 
+**Before every full demo run**, reclaim sandbox credit so authorize doesn't decline:
+
+```bash
+pnpm rain:reclaim
+```
+
+Prior settled runs consume the company credit line (`spendingPower`). When it drops
+below the next invoice, Rain returns `declined` / `account_credit_limit_exceeded`
+and the UI used to show **Settled · card settlement failed**. `rain:reclaim`
+cancels leftover cards and refunds/reverses simulate txs to restore headroom.
+Run A needs roughly **$6,350** of spending power for the four paid invoices.
+
 On boot the agent prints `card issuer : rain`. If it says `stub  ⚠️ NOT REAL RAIN`, the
 credentials aren't loading — fix that before presenting.
 
@@ -262,6 +274,8 @@ message becomes **❌ Rejected — no payment made**, and the rejection is writt
 | Dashboard stuck on **Connecting** | Agent process not up | Check the `[agent]` pane; confirm <http://localhost:3002/api/health> |
 | Dashboard **Disconnected** mid-demo | Agent crashed | Restart `pnpm demo` — the dashboard replays the full run from history on reconnect |
 | Approve tapped twice | — | Not a problem. Verified: two concurrent taps mint exactly one card. |
+| Card minted but invoice shows failed / Blocked | Authorize declined (often `account_credit_limit_exceeded`) | `pnpm rain:reclaim`, confirm spendingPower ≥ ~$6,350, then retry. Check `[rain]` logs for `declinedReason`. |
+| Authorize always `declined` after a few successful runs | Sandbox credit exhausted by prior settles | `pnpm rain:reclaim`. If still low, refund in Rain dashboard or ask Rain for a credit reset. |
 | Dashboard shows amber **STUB ISSUER** | Rain credentials not loaded | Set `RAIN_API_KEY` + `RAIN_USER_ID`, restart, confirm `pnpm rain:smoke` passes |
 | Rain 401 `Invalid api key` | Bad/expired key | Re-check `RAIN_API_KEY`; `pnpm rain:smoke` prints the full error body |
 | Card minted but invoice shows failed | Settlement didn't return `settled` | By design — the agent never writes `markPaid` unless Rain confirms settlement. Check the `[rain]` log line for the reason. |
