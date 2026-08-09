@@ -1,0 +1,12 @@
+{
+  "invoiceId": "INV-2026-1002",
+  "vendorId": "acme-corp",
+  "vendorName": "Acme Corp",
+  "amount": 780.0,
+  "currency": "USD",
+  "poRef": "PO-4588",
+  "lineItems": [
+    { "description": "Kraft mailer boxes x200", "amount": 340.0 },
+    { "description": "Bubble wrap rolls x50", "amount": 440.0 }
+  ]
+}

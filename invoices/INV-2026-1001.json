@@ -1,0 +1,13 @@
+{
+  "invoiceId": "INV-2026-1001",
+  "vendorId": "acme-corp",
+  "vendorName": "Acme Corp",
+  "amount": 1450.0,
+  "currency": "USD",
+  "poRef": "PO-4521",
+  "lineItems": [
+    { "description": "Kraft mailer boxes x500", "amount": 850.0 },
+    { "description": "Tissue paper x1000", "amount": 350.0 },
+    { "description": "Branded stickers x2000", "amount": 250.0 }
+  ]
+}

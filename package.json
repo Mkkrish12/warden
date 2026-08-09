@@ -1,0 +1,32 @@
+{
+  "name": "warden",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Warden — autonomous accounts-payable agent (Rain scoped cards + Monad on-chain policy)",
+  "scripts": {
+    "build:shared": "pnpm --filter @warden/shared build",
+    "dev:shared": "pnpm --filter @warden/shared dev",
+    "dev:agent": "pnpm --filter @warden/agent dev",
+    "agent:run": "pnpm --filter @warden/agent run run",
+    "slack:run": "pnpm --filter @warden/agent slack",
+    "build:agent": "pnpm --filter @warden/agent build",
+    "start:agent": "pnpm --filter @warden/agent start",
+    "dev:web": "pnpm --filter @warden/web dev",
+    "build:web": "pnpm --filter @warden/web build",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "contracts:build": "forge build --root contracts",
+    "contracts:test": "forge test --root contracts",
+    "api:run": "pnpm --filter @warden/agent api",
+    "demo": "concurrently -n agent,web -c cyan,magenta -k \"pnpm --filter @warden/agent demo\" \"pnpm dev:web\"",
+    "demo:agent": "pnpm --filter @warden/agent demo",
+    "demo:reset": "node scripts/reset-demo.mjs"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

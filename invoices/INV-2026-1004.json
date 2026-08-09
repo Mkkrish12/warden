@@ -1,0 +1,12 @@
+{
+  "invoiceId": "INV-2026-1004",
+  "vendorId": "globex",
+  "vendorName": "Globex Industries",
+  "amount": 6200.0,
+  "currency": "USD",
+  "poRef": "PO-4601",
+  "lineItems": [
+    { "description": "Organic cotton rolls x300", "amount": 5400.0 },
+    { "description": "Bamboo fiber sheets x50", "amount": 800.0 }
+  ]
+}

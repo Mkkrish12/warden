@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    // Resolve @warden/shared via the built package (node_modules symlink -> dist),
+    // not the source path alias, so the emit build stays within rootDir.
+    "paths": {}
+  },
+  "include": ["src"]
+}

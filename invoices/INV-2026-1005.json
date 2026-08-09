@@ -1,0 +1,12 @@
+{
+  "invoiceId": "INV-2026-1005",
+  "vendorId": "initech",
+  "vendorName": "Initech",
+  "amount": 920.0,
+  "currency": "USD",
+  "poRef": "PO-4555",
+  "lineItems": [
+    { "description": "3PL fulfillment fees — July", "amount": 720.0 },
+    { "description": "Return processing x40", "amount": 200.0 }
+  ]
+}

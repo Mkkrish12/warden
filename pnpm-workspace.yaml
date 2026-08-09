@@ -1,0 +1,11 @@
+packages:
+  - "shared"
+  - "agent"
+  - "web"
+
+allowBuilds:
+  esbuild: true
+
+# Native postinstall scripts we trust to run (esbuild fetches its platform binary).
+onlyBuiltDependencies:
+  - esbuild

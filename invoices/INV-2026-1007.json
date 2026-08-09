@@ -1,0 +1,12 @@
+{
+  "invoiceId": "INV-2026-1007",
+  "vendorId": "initech",
+  "vendorName": "Initech",
+  "amount": 1350.0,
+  "currency": "USD",
+  "poRef": "PO-4620",
+  "lineItems": [
+    { "description": "Expedited shipping surcharge", "amount": 600.0 },
+    { "description": "3PL fulfillment fees — August", "amount": 750.0 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "invoiceId": "INV-2026-1006",
+  "vendorId": "shadow-vendor",
+  "vendorName": "Shadow Vendor LLC",
+  "amount": 2100.0,
+  "currency": "USD",
+  "poRef": "PO-4610",
+  "lineItems": [
+    { "description": "Marketing consultation", "amount": 2100.0 }
+  ]
+}
