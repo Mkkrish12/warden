@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/cli.js",
     "api": "tsx src/server/run.ts",
-    "demo": "tsx src/main.ts"
+    "demo": "tsx src/main.ts",
+    "rain:smoke": "tsx scripts/rainSmoke.ts"
   },
   "dependencies": {
     "@slack/bolt": "^5.0.0",

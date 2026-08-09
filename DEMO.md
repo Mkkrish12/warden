@@ -3,17 +3,23 @@
 Two runs, about four minutes. Run A proves the agent pays autonomously. Run B proves it
 *refuses* to, and that a human tap is what moves the money.
 
-> ### ⚠️ Read this first
+> ### Nothing here is simulated except the inbox
 >
-> **The card issuer is currently a stub, not Rain.** The Rain API docs were never provided, so
-> `mintScopedCardAndSettle` returns a plausible fake card instead of calling Rain. Everything
-> else is real: real Monad testnet reads and writes, real policy enforcement, real Slack.
-> The dashboard shows an amber **`STUB ISSUER`** badge whenever this is true, so nothing on
-> screen can misrepresent a fake card as a real one.
+> Cards are **real Rain sandbox cards**, settlement is **real Rain authorization + settlement**,
+> and policy reads/writes hit **real Monad testnet (chain 10143)**. Only the invoice inbox is
+> synthetic JSON.
 >
-> **Do not claim a real card is minted until the Rain client is wired in.** Say "the agent
-> issues a scoped card" and point at the scope constraints — those are honest either way.
-> When Rain lands, the badge disappears and this warning can be deleted.
+> Two facts worth saying out loud, both verified against the Rain API and visible on the
+> **Cards** tab:
+>
+> - Every card's limit is a **lifetime** cap (`frequency: allTime`), set to that one invoice.
+>   True from the moment the card is minted — this is the claim to lead with.
+> - Rain **cancels** each card after its single payment settles (`status: canceled`).
+>   This is **asynchronous** — it lands a few minutes later, so cards minted seconds ago still
+>   read `active`. Say "Rain cancels it after the payment", not "instantly".
+>
+> "Single use" is not narrative — Rain enforces it. If the dashboard shows an amber
+> **`STUB ISSUER`** badge, Rain credentials are missing; fix that before presenting.
 
 ---
 
@@ -82,8 +88,21 @@ cast call $POLICY_CONTRACT_ADDRESS "approvedVendors(bytes32)(uint256)" \
 
 ### 6. Rain smoke test
 
-**Blocked.** `pnpm rain:smoke` does not exist, because the Rain API docs were never supplied.
-Once they are, this step becomes: mint one $10 scoped card and confirm it in the Rain dashboard.
+```bash
+pnpm rain:smoke
+```
+
+Mints one **real** $10 scoped card, authorizes it, settles it, and prints the cardId, last4,
+and transactionId. Exits 0 on success. Verify the card in the Rain dashboard.
+
+Requires `RAIN_API_KEY` and `RAIN_USER_ID` in `.env`. If you don't know your user id:
+
+```bash
+curl -H "Api-Key: $RAIN_API_KEY" https://api-dev.raincards.xyz/v1/issuing/users
+```
+
+On boot the agent prints `card issuer : rain`. If it says `stub  ⚠️ NOT REAL RAIN`, the
+credentials aren't loading — fix that before presenting.
 
 ### 7. Final dry run — then reset
 
@@ -243,7 +262,10 @@ message becomes **❌ Rejected — no payment made**, and the rejection is writt
 | Dashboard stuck on **Connecting** | Agent process not up | Check the `[agent]` pane; confirm <http://localhost:3002/api/health> |
 | Dashboard **Disconnected** mid-demo | Agent crashed | Restart `pnpm demo` — the dashboard replays the full run from history on reconnect |
 | Approve tapped twice | — | Not a problem. Verified: two concurrent taps mint exactly one card. |
-| Port 5173/3002 in use | Old process | Kill it, or set `WEB_API_PORT` |
+| Dashboard shows amber **STUB ISSUER** | Rain credentials not loaded | Set `RAIN_API_KEY` + `RAIN_USER_ID`, restart, confirm `pnpm rain:smoke` passes |
+| Rain 401 `Invalid api key` | Bad/expired key | Re-check `RAIN_API_KEY`; `pnpm rain:smoke` prints the full error body |
+| Card minted but invoice shows failed | Settlement didn't return `settled` | By design — the agent never writes `markPaid` unless Rain confirms settlement. Check the `[rain]` log line for the reason. |
+| Port 5173/3002 in use | Old process — **it may be a stale agent using the stub issuer** | Kill it. A stale process on 3002 will silently serve old data and mint stub cards. |
 | Amounts look wrong on screen | Wrong vendor caps seeded | `cast call $POLICY_CONTRACT_ADDRESS "approvedVendors(bytes32)(uint256)" $(cast keccak "globex")` → `5000000000` |
 
 ### If Slack dies mid-demo

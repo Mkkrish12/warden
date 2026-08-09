@@ -6,8 +6,12 @@ export interface RainCard {
   id: string;
   last4: string;
   status?: string;
+  type?: string;
+  userId?: string;
   expirationMonth?: number | string;
   expirationYear?: number | string;
+  /** Rain applies a 1.2x pre-auth buffer; `frequency: allTime` makes it a lifetime cap. */
+  limit?: { amount: number; frequency?: string };
   encryptedPan?: { data: string; iv: string } | string;
   encryptedCvc?: { data: string; iv: string } | string;
 }
@@ -44,7 +48,14 @@ export interface RainClient {
     merchantName: string;
     merchantCategoryCode?: string;
   }): Promise<RainAuthorization>;
-  settle(transactionId: string): Promise<RainAuthorization>;
+  /**
+   * @param amountInUSDCents required by the live sandbox — it rejects an empty
+   *   body with "body must have required property 'amount'", despite the docs
+   *   describing `{}` as settling the full authorized amount.
+   */
+  settle(transactionId: string, amountInUSDCents: number): Promise<RainAuthorization>;
+  /** Fetch a card's current state from Rain — status, limit, expiry. */
+  getCard(cardId: string): Promise<RainCard>;
   revealLast4(card: RainCard, session: RainSession): string;
 }
 
@@ -129,12 +140,17 @@ export function createRainClient(cfg: AgentConfig): RainClient {
       return unwrap<RainAuthorization>(body);
     },
 
-    async settle(transactionId) {
+    async settle(transactionId, amountInUSDCents) {
       const body = await request<unknown>(
         `/simulate/transactions/${transactionId}/settle`,
-        { method: "POST", body: {} },
+        { method: "POST", body: { amount: amountInUSDCents } },
       );
       return unwrap<RainAuthorization>(body);
+    },
+
+    async getCard(cardId) {
+      const body = await request<unknown>(`/issuing/cards/${cardId}`, { method: "GET" });
+      return unwrap<RainCard>(body);
     },
 
     /**

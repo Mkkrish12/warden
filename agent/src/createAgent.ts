@@ -1,4 +1,5 @@
-import { loadConfig, type AgentConfig } from "./config.js";
+import { loadConfig, isRainConfigured, type AgentConfig } from "./config.js";
+import { createRainPaymentProvider } from "./providers/rainProvider.js";
 import { createEventBus, type EventBus } from "./events/eventBus.js";
 import { createPolicyClient, type PolicyClient } from "./policy/policyClient.js";
 import { createStubPaymentProvider } from "./payments/stubProvider.js";
@@ -32,7 +33,16 @@ export function createAgent(opts: CreateAgentOptions = {}): Agent {
   const config = opts.config ?? loadConfig();
   const bus = opts.bus ?? createEventBus();
   const policy = opts.policy ?? createPolicyClient(config);
-  const payments = opts.payments ?? createStubPaymentProvider();
+
+  // Rain when credentials are present, stub otherwise. Every surface reads
+  // `payments.name`, so a stubbed card is always labelled as one.
+  const payments =
+    opts.payments ??
+    (isRainConfigured(config) ? createRainPaymentProvider(config) : createStubPaymentProvider());
+
+  if (!opts.payments && !isRainConfigured(config)) {
+    console.warn("[warden] RAIN_API_KEY/RAIN_USER_ID not set — using the stub card issuer.");
+  }
 
   const orchestrator = createOrchestrator({
     bus,

@@ -20,13 +20,16 @@
     "api:run": "pnpm --filter @warden/agent api",
     "demo": "concurrently -n agent,web -c cyan,magenta -k \"pnpm --filter @warden/agent demo\" \"pnpm dev:web\"",
     "demo:agent": "pnpm --filter @warden/agent demo",
-    "demo:reset": "node scripts/reset-demo.mjs"
+    "demo:reset": "node scripts/reset-demo.mjs",
+    "deck:pptx": "node deck/generate-pptx.mjs",
+    "rain:smoke": "pnpm --filter @warden/agent rain:smoke"
   },
   "packageManager": "pnpm@11.20.0",
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "concurrently": "^10.0.4"
+    "concurrently": "^10.0.4",
+    "pptxgenjs": "^4.0.1"
   }
 }

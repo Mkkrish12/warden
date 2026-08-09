@@ -4,6 +4,7 @@ import { useAgentStream } from "./lib/useAgentStream";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { InvoiceDetail } from "./pages/InvoiceDetail";
+import { CardsPage } from "./pages/CardsPage";
 import { TransactionsPage } from "./pages/TransactionsPage";
 import { PolicyPage } from "./pages/PolicyPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -38,6 +39,7 @@ export default function App() {
           {page === "invoices" && (
             <InvoicesPage invoices={invoices} onOpenInvoice={setOpenInvoiceId} />
           )}
+          {page === "cards" && <CardsPage />}
           {page === "transactions" && <TransactionsPage events={events} invoices={invoices} />}
           {page === "policy" && <PolicyPage policyAddress={meta.policyAddress} />}
           {page === "settings" && <SettingsPage meta={meta} />}

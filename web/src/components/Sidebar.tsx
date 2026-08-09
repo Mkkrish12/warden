@@ -1,13 +1,14 @@
-import { ArrowLeftRight, FileText, LayoutGrid, Settings, Shield } from "lucide-react";
+import { ArrowLeftRight, CreditCard, FileText, LayoutGrid, Settings, Shield } from "lucide-react";
 import type { ConnectionState } from "../lib/useAgentStream";
 
-export type PageId = "dashboard" | "invoices" | "transactions" | "policy" | "settings";
+export type PageId = "dashboard" | "invoices" | "cards" | "transactions" | "policy" | "settings";
 
 const NAV: { id: PageId; label: string; icon: typeof LayoutGrid }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
   { id: "invoices", label: "Invoices", icon: FileText },
+  { id: "cards", label: "Cards", icon: CreditCard },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
-  { id: "policy", label: "Policy", icon: Shield },
+  { id: "policy", label: "Approved Vendors", icon: Shield },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
